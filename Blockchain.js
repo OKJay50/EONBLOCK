@@ -13,6 +13,9 @@ class Blockchain:
         # Add the genesis block
         self.new_block(previous_hash='1', proof=100)
 
+        # Add the data structure 
+        self.transactions_map = {}
+
     def new_block(self, proof, previous_hash=None):
         block = {
             'index': len(self.chain) + 1,
@@ -21,12 +24,18 @@ class Blockchain:
             'proof': proof,
             'previous_hash': previous_hash or self.hash(self.chain[-1]),
         }
-
+        
         # Reset current list of transactions
         self.current_transactions = []
 
         # Add the new block to the chain
         self.chain.append(block)
+
+        # Add the transactions to the data structure
+        for transaction in block['transactions']:
+            if transaction['id'] not in self.transactions_map:
+                self.transactions_map[transaction['id']] = transaction
+
         return block
 
     def new_transaction(self, sender, recipient, amount):
@@ -34,6 +43,7 @@ class Blockchain:
             'sender': sender,
             'recipient': recipient,
             'amount': amount,
+            'id': hashlib.sha256(f'{sender}{recipient}{amount}{time()}'.encode()).hexdigest()
         })
 
         return self.last_block['index'] + 1
@@ -99,6 +109,14 @@ class Blockchain:
         # Replace our chain if we discovered a new, valid chain that's longer than ours
         if new_chain:
             self.chain = new_chain
+
+            # Add transactions to the data structure
+            self.transactions_map = {}
+            for block in self.chain:
+                for transaction in block['transactions']:
+                    if transaction['id'] not in self.transactions_map:
+                        self.transactions_map[transaction['id']] = transaction
+
             return True
 
         return False
